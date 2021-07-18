@@ -38,12 +38,14 @@ float temp = 0;
 float humidity = 0;
 float lat = 0;
 float lon = 0;
+float velocity = 0;
 String latitude = 0;
 String longitude = 0;
 unsigned long age, fix_age;
 int gpsyear;
 byte gpsmonth, gpsday, gpshour, gpsminute, gpssecond, hundredths;
 double pitch,roll;
+double acceleration;
 
 //SPI Settings
 //MOSI,MISO,SCLK Set by default
@@ -134,6 +136,23 @@ void setup() {
   Serial.println(F("------------------------------------"));
   // Set delay between sensor readings based on sensor details.
   delayMS = sensor.min_delay / 1000;
+
+    String dataString;
+    dataString += "Velocity , Acceleration , ";
+    dataString += "Latitude , Longityde , ";
+    dataString += "Reason , ";
+    dataString += "Time , ";
+    File dataFile = SD.open("log.csv",FILE_WRITE);
+    if(dataFile)
+    {
+      dataFile.println(dataString);
+      dataFile.close();
+      Serial.println(dataString);
+    }
+    else
+    {
+      Serial.println("Couldn't access file");
+    }
 }
 
 void loop() {
@@ -143,6 +162,7 @@ void loop() {
     {
       gps.f_get_position(&lat,&lon);//Get latitude and longitude
       gps.crack_datetime(&gpsyear, &gpsmonth, &gpsday, &gpshour, &gpsminute, &gpssecond, &hundredths, &fix_age);
+      gps.f_speed_kmph(&velocity);
     }
     latitude = String(lat,6);
     longitude = String(lon,6);
@@ -203,6 +223,7 @@ void loop() {
     Serial.println(F("%"));
   }
   String dataString;
+  dataString += to_string(velocity) + " , " + to_string(acceleration) + " , ";
   dataString += to_string(latitude) + " , " + to_string(longitude) + " , ";
   int flag = 0;
   if(co_conc > 50) //If concentration of CO is greater than 50PPM
@@ -231,7 +252,7 @@ void loop() {
   }
 
   dataString += gpshour + " : " + gpsminute + " : " + gpsseconds + " on " + gpsday + "/" + gpsmonth + "/" + gpsyear;
-    File dataFile = SD.open("log.txt",FILE_WRITE);
+    File dataFile = SD.open("log.csv",FILE_WRITE);
     if(dataFile)
     {
       dataFile.println(dataString);
@@ -252,6 +273,8 @@ void getAngle(int Vx,int Vy,int Vz) {
   double x = Vx;
   double y = Vy;
   double z = Vz;
+
+  acceleration = sqrt(pow(x,2) + pow(y,2) + pow(z,2));
   
   pitch = atan(x/sqrt((y*y) + (z*z)));
   roll = atan(y/sqrt((x*x) + (z*z)));
